@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 
+	"github.com/arxanchain/riot"
+	"github.com/arxanchain/riot/types"
 	"github.com/go-ego/gse"
-	"github.com/go-ego/riot"
-	"github.com/go-ego/riot/types"
 )
 
 var (

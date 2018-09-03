@@ -15,7 +15,7 @@
 package http
 
 import (
-	"github.com/go-ego/riot/types"
+	"github.com/arxanchain/riot/types"
 )
 
 // Text search for documents

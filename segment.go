@@ -20,8 +20,8 @@ import (
 
 	"strings"
 
+	"github.com/arxanchain/riot/types"
 	"github.com/go-ego/gpy"
-	"github.com/go-ego/riot/types"
 )
 
 // TMap defines the tokens map type map[string][]int

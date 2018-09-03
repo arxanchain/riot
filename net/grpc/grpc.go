@@ -22,9 +22,9 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
-	"github.com/go-ego/riot/net/com"
-	pb "github.com/go-ego/riot/net/grpc/riot-pb"
-	"github.com/go-ego/riot/types"
+	"github.com/arxanchain/riot/net/com"
+	pb "github.com/arxanchain/riot/net/grpc/riot-pb"
+	"github.com/arxanchain/riot/types"
 	zlog "github.com/go-vgo/gt/zlog"
 	"github.com/gogo/protobuf/proto"
 )

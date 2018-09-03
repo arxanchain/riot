@@ -18,8 +18,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/go-ego/riot"
-	"github.com/go-ego/riot/types"
+	"github.com/arxanchain/riot"
+	"github.com/arxanchain/riot/types"
 )
 
 var (

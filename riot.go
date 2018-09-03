@@ -24,9 +24,9 @@ import (
 	"encoding/binary"
 	"encoding/gob"
 
+	"github.com/arxanchain/riot/core"
+	"github.com/arxanchain/riot/types"
 	"github.com/go-ego/murmur"
-	"github.com/go-ego/riot/core"
-	"github.com/go-ego/riot/types"
 	toml "github.com/go-vgo/gt/conf"
 )
 

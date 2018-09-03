@@ -27,9 +27,9 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 
-	"github.com/go-ego/riot/net/com"
-	pb "github.com/go-ego/riot/net/grpc/riot-pb"
-	"github.com/go-ego/riot/types"
+	"github.com/arxanchain/riot/net/com"
+	pb "github.com/arxanchain/riot/net/grpc/riot-pb"
+	"github.com/arxanchain/riot/types"
 	grpclb "github.com/go-vgo/grpclb"
 )
 
