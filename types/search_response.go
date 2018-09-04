@@ -75,6 +75,9 @@ type Content struct {
 type ScoredDoc struct {
 	DocId uint64
 
+	// 跟文档绑定的对象ID
+	ObjectID interface{}
+
 	// new 返回文档 Content
 	Content string
 	// new 返回文档属性 Attri

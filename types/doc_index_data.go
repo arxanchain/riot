@@ -40,6 +40,9 @@ type DocData struct {
 	// 这些标签并不出现在文档文本中
 	Labels []string
 
+	// 跟当前文档绑定的对象ID
+	ObjectID interface{}
+
 	// 文档的评分字段，可以接纳任何类型的结构体
 	Fields interface{}
 }

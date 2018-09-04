@@ -31,8 +31,9 @@ type Ranker struct {
 		fields map[uint64]interface{}
 		docs   map[uint64]bool
 		// new
-		content map[uint64]string
-		attri   map[uint64]interface{}
+		content  map[uint64]string
+		attri    map[uint64]interface{}
+		objectID map[uint64]interface{}
 	}
 
 	idOnly      bool
@@ -57,6 +58,7 @@ func (ranker *Ranker) Init(onlyID ...bool) {
 		// new
 		ranker.lock.content = make(map[uint64]string)
 		ranker.lock.attri = make(map[uint64]interface{})
+		ranker.lock.objectID = make(map[uint64]interface{})
 	}
 }
 
@@ -81,7 +83,10 @@ func (ranker *Ranker) AddDoc(
 
 		if len(content) > 1 {
 			ranker.lock.attri[docId] = content[1]
-			// ranker.lock.attri[docId] = attri
+		}
+
+		if len(content) > 2 {
+			ranker.lock.objectID[docId] = content[2]
 		}
 	}
 
@@ -184,6 +189,7 @@ func (ranker *Ranker) RankDocs(docs []types.IndexedDoc,
 			fs := ranker.lock.fields[d.DocId]
 			content := ranker.lock.content[d.DocId]
 			attri := ranker.lock.attri[d.DocId]
+			objectID := ranker.lock.objectID[d.DocId]
 
 			ranker.lock.RUnlock()
 			// 计算评分并剔除没有分值的文档
@@ -193,9 +199,10 @@ func (ranker *Ranker) RankDocs(docs []types.IndexedDoc,
 					outputDocs = append(outputDocs, types.ScoredDoc{
 						DocId: d.DocId,
 						// new
-						Fields:  fs,
-						Content: content,
-						Attri:   attri,
+						Fields:   fs,
+						Content:  content,
+						Attri:    attri,
+						ObjectID: objectID,
 						//
 						Scores:           scores,
 						TokenSnippetLocs: d.TokenSnippetLocs,

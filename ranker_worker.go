@@ -20,8 +20,9 @@ import (
 )
 
 type rankerAddDocReq struct {
-	docId  uint64
-	fields interface{}
+	docId    uint64
+	objectID interface{}
+	fields   interface{}
 	// new
 	content string
 	// new 属性
@@ -54,7 +55,7 @@ func (engine *Engine) rankerAddDocWorker(shard int) {
 		}
 		// } else {
 		engine.rankers[shard].AddDoc(request.docId, request.fields,
-			request.content, request.attri)
+			request.content, request.attri, request.objectID)
 		// }
 	}
 }

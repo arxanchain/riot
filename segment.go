@@ -306,8 +306,12 @@ func (engine *Engine) segmenterWorker() {
 		}
 		rankerRequest := rankerAddDocReq{
 			// docId: request.docId, fields: request.data.Fields}
-			docId: request.docId, fields: request.data.Fields,
-			content: request.data.Content, attri: request.data.Attri}
+			docId:    request.docId,
+			objectID: request.data.ObjectID,
+			fields:   request.data.Fields,
+			content:  request.data.Content,
+			attri:    request.data.Attri,
+		}
 		engine.rankerAddDocChans[shard] <- rankerRequest
 	}
 }
