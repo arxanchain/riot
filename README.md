@@ -10,8 +10,9 @@
 [![Build Status](https://travis-ci.org/go-ego/riot.svg)](https://travis-ci.org/go-ego/riot)
 [![Go Report Card](https://goreportcard.com/badge/github.com/go-ego/riot)](https://goreportcard.com/report/github.com/go-ego/riot)
 [![GoDoc](https://godoc.org/github.com/go-ego/riot?status.svg)](https://godoc.org/github.com/go-ego/riot)
-[![Release](https://github-release-version.herokuapp.com/github/go-ego/riot/release.svg?style=flat)](https://github.com/go-ego/riot/releases/latest)
+[![GitHub release](https://img.shields.io/github/release/go-ego/riot.svg)](https://github.com/go-ego/riot/releases/latest)
 [![Join the chat at https://gitter.im/go-ego/ego](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/go-ego/ego?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+<!-- [![Release](https://github-release-version.herokuapp.com/github/go-ego/riot/release.svg?style=flat)](https://github.com/go-ego/riot/releases/latest) -->
 <!--<a href="https://github.com/go-ego/ego/releases"><img src="https://img.shields.io/badge/%20version%20-%206.0.0%20-blue.svg?style=flat-square" alt="Releases"></a>-->
 
 <!-- ![ego Logo](logo/512px.svg) -->
@@ -35,8 +36,8 @@ Go Open Source, Distributed, Simple and efficient full text search engine.
 
 * [Look at Word segmentation rules](https://github.com/go-ego/riot/blob/master/docs/en/segmenter.md)
 
-
-Riot v0.10.0 was released in Nov 2017, check the [Changelog](https://github.com/go-ego/riot/blob/master/docs/CHANGELOG.md) for the full details.
+<!-- 
+Riot v0.20.0 was released in Nov 2017, check the [Changelog](https://github.com/go-ego/riot/blob/master/docs/CHANGELOG.md) for the full details. -->
 
 ## Requirements
 Go version >= 1.8
@@ -103,9 +104,9 @@ func main() {
 	rounded cards, new colors, and the 4 mysterious colored dots again`
 	
 	// Add the document to the index, docId starts at 1
-	searcher.Index(1, types.DocData{Content: text})
-	searcher.Index(2, types.DocData{Content: text1}, false)
-	searcher.IndexDoc(3, types.DocData{Content: text2}, true)
+	searcher.Index("1", types.DocData{Content: text})
+	searcher.Index("2", types.DocData{Content: text1}, false)
+	searcher.IndexDoc("3", types.DocData{Content: text2}, true)
 
 	// Wait for the index to refresh
 	searcher.Flush()
@@ -139,9 +140,10 @@ func main() {
 		, I wonder where they are`}
 	data1 := types.DocData{Content: "所以, 你好, 再见"}
 	data2 := types.DocData{Content: "没有理由"}
-	searcher.Index(1, data)
-	searcher.Index(2, data1)
-	searcher.Index(3, data2)
+
+	searcher.Index("1", data)
+	searcher.Index("2", data1)
+	searcher.Index("3", data2)
 	searcher.Flush()
 
 	req := types.SearchReq{Text: "你好"}
@@ -162,6 +164,11 @@ func main() {
 #### [Look at benchmark example](https://github.com/go-ego/riot/blob/master/examples/benchmark/benchmark.go)
 
 #### [Riot search engine templates, client and dictionaries](https://github.com/go-ego/riot/tree/master/data)
+
+## Authors
+* [The author is vz](https://github.com/vcaesar)
+* [Maintainers](https://github.com/orgs/go-ego/people)
+* [Contributors](https://github.com/go-ego/riot/graphs/contributors)
 
 ## Donate
 

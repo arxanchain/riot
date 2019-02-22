@@ -73,7 +73,7 @@ type Content struct {
 
 // ScoredDoc scored the document
 type ScoredDoc struct {
-	DocId uint64
+	ScoredID
 
 	// 跟文档绑定的对象ID
 	ObjectID interface{}
@@ -84,20 +84,6 @@ type ScoredDoc struct {
 	Attri interface{}
 	// new 返回评分字段
 	Fields interface{}
-
-	// 文档的打分值
-	// 搜索结果按照 Scores 的值排序，先按照第一个数排，
-	// 如果相同则按照第二个数排序，依次类推。
-	Scores []float32
-
-	// 用于生成摘要的关键词在文本中的字节位置，
-	// 该切片长度和 SearchResp.Tokens 的长度一样
-	// 只有当 IndexType == LocsIndex 时不为空
-	TokenSnippetLocs []int
-
-	// 关键词出现的位置
-	// 只有当 IndexType == LocsIndex 时不为空
-	TokenLocs [][]int
 }
 
 // ScoredDocs 为了方便排序
@@ -113,7 +99,8 @@ func (docs ScoredDocs) Swap(i, j int) {
 
 func (docs ScoredDocs) Less(i, j int) bool {
 	// 为了从大到小排序，这实际上实现的是 More 的功能
-	for iScore := 0; iScore < utils.MinInt(len(docs[i].Scores), len(docs[j].Scores)); iScore++ {
+	min := utils.MinInt(len(docs[i].Scores), len(docs[j].Scores))
+	for iScore := 0; iScore < min; iScore++ {
 		if docs[i].Scores[iScore] > docs[j].Scores[iScore] {
 			return true
 		} else if docs[i].Scores[iScore] < docs[j].Scores[iScore] {
@@ -135,7 +122,7 @@ func (docs ScoredDocs) Less(i, j int) bool {
 
 // ScoredID scored doc only id
 type ScoredID struct {
-	DocId uint64
+	DocId string
 
 	// 文档的打分值
 	// 搜索结果按照 Scores 的值排序，先按照第一个数排，
@@ -165,7 +152,8 @@ func (docs ScoredIDs) Swap(i, j int) {
 
 func (docs ScoredIDs) Less(i, j int) bool {
 	// 为了从大到小排序，这实际上实现的是 More 的功能
-	for iScore := 0; iScore < utils.MinInt(len(docs[i].Scores), len(docs[j].Scores)); iScore++ {
+	min := utils.MinInt(len(docs[i].Scores), len(docs[j].Scores))
+	for iScore := 0; iScore < min; iScore++ {
 		if docs[i].Scores[iScore] > docs[j].Scores[iScore] {
 			return true
 		} else if docs[i].Scores[iScore] < docs[j].Scores[iScore] {
