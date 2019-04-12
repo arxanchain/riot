@@ -11,15 +11,6 @@ import (
 	"github.com/vcaesar/tt"
 )
 
-func makeDocIds() map[uint64]bool {
-	docIds := make(map[uint64]bool)
-	docIds[5] = true
-	docIds[3] = true
-	docIds[1] = true
-
-	return docIds
-}
-
 func TestEngineIndexWithNewStore(t *testing.T) {
 	gob.Register(ScoringFields{})
 	var engine = New("./testdata/test_dict.txt", "./riot.new", 8)
@@ -27,7 +18,7 @@ func TestEngineIndexWithNewStore(t *testing.T) {
 	// engine = engine.New()
 	AddDocs(engine)
 
-	engine.RemoveDoc(5, true)
+	engine.RemoveDoc("5", true)
 	engine.Flush()
 
 	engine.Close()
@@ -40,7 +31,7 @@ func TestEngineIndexWithNewStore(t *testing.T) {
 	engine1.Flush()
 	log.Println("new engine1 start...")
 
-	outputs := engine1.Search(types.SearchReq{Text: "World人口"})
+	outputs := engine1.Search(types.SearchReq{Text: reqText})
 	tt.Expect(t, "2", len(outputs.Tokens))
 	tt.Expect(t, "world", outputs.Tokens[0])
 	tt.Expect(t, "人口", outputs.Tokens[1])
@@ -53,7 +44,7 @@ func TestEngineIndexWithNewStore(t *testing.T) {
 	tt.Expect(t, "[]", outDocs[0].TokenSnippetLocs)
 
 	// tt.Expect(t, "1", outDocs[1].DocId)
-	tt.Expect(t, "2000", int(outDocs[1].Scores[0]*1000))
+	tt.Expect(t, "2215", int(outDocs[1].Scores[0]*1000))
 	tt.Expect(t, "[]", outDocs[1].TokenSnippetLocs)
 
 	engine1.Close()
@@ -71,24 +62,15 @@ func testRankOpt(idOnly bool) types.EngineOpts {
 		IDOnly:      idOnly,
 		GseDict:     "./testdata/test_dict.txt",
 		DefRankOpts: &rankTestOpts,
-		IndexerOpts: &types.IndexerOpts{
-			IndexType: types.LocsIndex,
-		},
+		IndexerOpts: inxOpts,
 	}
 }
 
-func TestDocRankID(t *testing.T) {
-	var engine Engine
-
-	engine.Init(testRankOpt(true))
-	AddDocs(&engine)
-
-	engine.RemoveDoc(5)
-	engine.Flush()
-
+func lookupReq(engine *Engine) (types.SearchReq, []string, chan rankerReturnReq) {
 	request := types.SearchReq{
-		Text:   "World人口",
-		DocIds: makeDocIds()}
+		Text:   reqText,
+		DocIds: makeDocIds(),
+	}
 
 	tokens := engine.Tokens(request)
 	// 建立排序器返回的通信通道
@@ -112,11 +94,24 @@ func TestDocRankID(t *testing.T) {
 		engine.indexerLookupChans[shard] <- lookupRequest
 	}
 
+	return request, tokens, rankerReturnChan
+}
+
+func TestDocRankID(t *testing.T) {
+	var engine Engine
+
+	engine.Init(testRankOpt(true))
+	AddDocs(&engine)
+
+	engine.RemoveDoc("5")
+	engine.Flush()
+
+	request, tokens, rankerReturnChan := lookupReq(&engine)
 	outputs := engine.RankID(request, rankTestOpts, tokens, rankerReturnChan)
 
 	if outputs.Docs != nil {
 		outDocs := outputs.Docs.(types.ScoredIDs)
-		tt.Expect(t, "2", len(outDocs))
+		tt.Expect(t, "1", len(outDocs))
 	}
 	tt.Expect(t, "2", len(outputs.Tokens))
 	tt.Expect(t, "2", outputs.NumDocs)
@@ -130,53 +125,28 @@ func TestDocRanks(t *testing.T) {
 	engine.Init(testRankOpt(false))
 	AddDocs(&engine)
 
-	engine.RemoveDoc(5)
+	engine.RemoveDoc("5")
 	engine.Flush()
 
-	request := types.SearchReq{
-		Text:   "World人口",
-		DocIds: makeDocIds()}
-
-	tokens := engine.Tokens(request)
-	// 建立排序器返回的通信通道
-	rankerReturnChan := make(
-		chan rankerReturnReq, engine.initOptions.NumShards)
-
-	// 生成查找请求
-	lookupRequest := indexerLookupReq{
-		countDocsOnly:    request.CountDocsOnly,
-		tokens:           tokens,
-		labels:           request.Labels,
-		docIds:           request.DocIds,
-		options:          rankTestOpts,
-		rankerReturnChan: rankerReturnChan,
-		orderless:        request.Orderless,
-		logic:            request.Logic,
-	}
-
-	// 向索引器发送查找请求
-	for shard := 0; shard < engine.initOptions.NumShards; shard++ {
-		engine.indexerLookupChans[shard] <- lookupRequest
-	}
-
+	request, tokens, rankerReturnChan := lookupReq(&engine)
 	outputs := engine.Ranks(request, rankTestOpts, tokens, rankerReturnChan)
 
 	if outputs.Docs != nil {
 		outDocs := outputs.Docs.(types.ScoredDocs)
-		tt.Expect(t, "2", len(outDocs))
+		tt.Expect(t, "1", len(outDocs))
 	}
 	tt.Expect(t, "2", len(outputs.Tokens))
 	tt.Expect(t, "2", outputs.NumDocs)
 
 	// test search
 	outputs1 := engine.Search(types.SearchReq{
-		Text:    "World人口",
-		Timeout: 10,
+		Text:    reqText,
+		Timeout: 1000,
 		DocIds:  makeDocIds()})
 
 	if outputs1.Docs != nil {
 		outDocs1 := outputs.Docs.(types.ScoredDocs)
-		tt.Expect(t, "2", len(outDocs1))
+		tt.Expect(t, "1", len(outDocs1))
 	}
 	tt.Expect(t, "2", len(outputs1.Tokens))
 	tt.Expect(t, "2", outputs1.NumDocs)
@@ -188,7 +158,7 @@ func TestDocGetAllDocAndID(t *testing.T) {
 	gob.Register(ScoringFields{})
 
 	var engine Engine
-	engine.Init(types.EngineOpts{
+	opts := types.EngineOpts{
 		Using:     1,
 		NumShards: 5,
 		UseStore:  true,
@@ -197,60 +167,59 @@ func TestDocGetAllDocAndID(t *testing.T) {
 		IDOnly:      true,
 		GseDict:     "./testdata/test_dict.txt",
 		DefRankOpts: &rankTestOpts,
-		IndexerOpts: &types.IndexerOpts{
-			IndexType: types.LocsIndex,
-		},
-	})
+		IndexerOpts: inxOpts,
+	}
+	engine.Init(opts)
 
 	AddDocs(&engine)
 
-	engine.RemoveDoc(5)
+	engine.RemoveDoc("5")
 	engine.Flush()
 
 	allIds := engine.GetDBAllIds()
 	fmt.Println("all id", allIds)
-	tt.Expect(t, "4", len(allIds))
-	tt.Expect(t, "[3 4 1 2]", allIds)
+	tt.Expect(t, "5", len(allIds))
+	tt.Expect(t, "[3 4 1 6 2]", allIds)
 
 	allIds = engine.GetAllDocIds()
 	fmt.Println("all doc id", allIds)
-	tt.Expect(t, "4", len(allIds))
-	tt.Expect(t, "[3 4 1 2]", allIds)
+	tt.Expect(t, "5", len(allIds))
+	tt.Expect(t, "[3 4 1 6 2]", allIds)
 
 	ids, docs := engine.GetDBAllDocs()
 	fmt.Println("all id and doc", allIds, docs)
-	tt.Expect(t, "4", len(ids))
-	tt.Expect(t, "4", len(docs))
-	tt.Expect(t, "[3 4 1 2]", ids)
-	allDoc := `[{有人口 <nil> [] [] {2 3 1}} {有七十亿人口 <nil> [] [] {2 3 3}} {The world, 有七十亿人口人口 <nil> [] [] {1 2 3}} {The world, 人口 <nil> [] [] <nil>}]`
+	tt.Expect(t, "5", len(ids))
+	tt.Expect(t, "5", len(docs))
+	tt.Expect(t, "[3 4 1 6 2]", ids)
+	allDoc := `[{The world <nil> [] [] <nil>} {有人口 <nil> [] [] {2 3 1}} {The world, 有七十亿人口人口 <nil> [] [] {1 2 3}} {有七十亿人口 <nil> [] [] {2 3 3}} {The world, 人口 <nil> [] [] <nil>}]`
 	tt.Expect(t, allDoc, docs)
 
-	has := engine.HasDoc(5)
+	has := engine.HasDoc("5")
 	tt.Expect(t, "false", has)
 
-	has = engine.HasDoc(2)
+	has = engine.HasDoc("2")
 	tt.Equal(t, true, has)
-	has = engine.HasDoc(3)
+	has = engine.HasDoc("3")
 	tt.Equal(t, true, has)
-	has = engine.HasDoc(4)
+	has = engine.HasDoc("4")
 	tt.Expect(t, "true", has)
 
-	dbhas := engine.HasDocDB(5)
+	dbhas := engine.HasDocDB("5")
 	tt.Expect(t, "false", dbhas)
 
-	dbhas = engine.HasDocDB(2)
+	dbhas = engine.HasDocDB("2")
 	tt.Equal(t, true, dbhas)
-	dbhas = engine.HasDocDB(3)
+	dbhas = engine.HasDocDB("3")
 	tt.Equal(t, true, dbhas)
-	dbhas = engine.HasDocDB(4)
+	dbhas = engine.HasDocDB("4")
 	tt.Expect(t, "true", dbhas)
 
-	docIds := make(map[uint64]bool)
-	docIds[5] = true
-	docIds[1] = true
+	docIds := make(map[string]bool)
+	docIds["5"] = true
+	docIds["1"] = true
 
 	outputs := engine.Search(types.SearchReq{
-		Text:   "World人口",
+		Text:   reqText,
 		DocIds: docIds})
 
 	if outputs.Docs != nil {
@@ -265,26 +234,32 @@ func TestDocGetAllDocAndID(t *testing.T) {
 	os.RemoveAll("riot.id")
 }
 
-func testOpts(use int, store string) types.EngineOpts {
+func testOpts(use int, store string, args ...bool) types.EngineOpts {
+	var pinyin bool
+	if len(args) > 0 {
+		pinyin = args[0]
+	}
+
 	return types.EngineOpts{
 		// Using:      1,
 		Using:       use,
 		UseStore:    true,
 		StoreFolder: store,
+		PinYin:      pinyin,
 		IDOnly:      true,
 		GseDict:     "./testdata/test_dict.txt",
 	}
 }
 
 func TestDocPinYin(t *testing.T) {
-	var engine Engine
+	var engine, pinyinOpt Engine
 	engine.Init(testOpts(0, "riot.py"))
+	pinyinOpt.Init(testOpts(0, "riot.py.opt", true))
 
 	// AddDocs(&engine)
 	// engine.RemoveDoc(5)
 
-	tokens := engine.PinYin("在路上, in the way")
-
+	tokens := engine.PinYin(text2)
 	fmt.Println("tokens...", tokens)
 	tt.Expect(t, "52", len(tokens))
 
@@ -296,18 +271,30 @@ func TestDocPinYin(t *testing.T) {
 	}
 
 	index1 := types.DocData{Tokens: tokenDatas, Fields: "在路上"}
-	index2 := types.DocData{Content: "在路上, in the way",
-		Tokens: tokenDatas}
+	index2 := types.DocData{Content: text2, Tokens: tokenDatas}
 
-	engine.Index(10, index1)
-	engine.Index(11, index2)
-
+	engine.Index("10", index1)
+	engine.Index("11", index2)
 	engine.Flush()
 
-	docIds := make(map[uint64]bool)
-	docIds[5] = true
-	docIds[10] = true
-	docIds[11] = true
+	data := types.DocData{Content: text2}
+	pinyinOpt.Index("10", data)
+	pinyinOpt.Index("11", data)
+	pinyinOpt.Flush()
+
+	docIds := make(map[string]bool)
+	docIds["5"] = true
+	docIds["10"] = true
+	docIds["11"] = true
+
+	pyOutputs := pinyinOpt.SearchID(types.SearchReq{
+		Text:   "zl",
+		DocIds: docIds,
+	})
+
+	tt.Expect(t, "2", len(pyOutputs.Docs))
+	tt.Expect(t, "1", len(pyOutputs.Tokens))
+	tt.Expect(t, "2", pyOutputs.NumDocs)
 
 	outputs := engine.Search(types.SearchReq{
 		Text:   "zl",
@@ -325,7 +312,9 @@ func TestDocPinYin(t *testing.T) {
 	tt.Expect(t, "2", outputs.NumDocs)
 
 	engine.Close()
+	pinyinOpt.Close()
 	os.RemoveAll("riot.py")
+	os.RemoveAll("riot.py.opt")
 }
 
 func TestForSplitData(t *testing.T) {
@@ -334,22 +323,22 @@ func TestForSplitData(t *testing.T) {
 
 	AddDocs(&engine)
 
-	engine.RemoveDoc(5)
+	engine.RemoveDoc("5")
 	engine.Flush()
 
-	tokenDatas := engine.PinYin("在路上, in the way")
+	tokenDatas := engine.PinYin(text2)
 	tokens, num := engine.ForSplitData(tokenDatas, 52)
 	tt.Expect(t, "93", len(tokens))
 	tt.Expect(t, "104", num)
 
 	index1 := types.DocData{Content: "在路上"}
-	engine.Index(10, index1, true)
+	engine.Index("10", index1, true)
 
-	docIds := make(map[uint64]bool)
-	docIds[5] = true
-	docIds[1] = true
+	docIds := make(map[string]bool)
+	docIds["5"] = true
+	docIds["1"] = true
 	outputs := engine.Search(types.SearchReq{
-		Text:   "World人口",
+		Text:   reqText,
 		DocIds: docIds})
 
 	if outputs.Docs != nil {
@@ -363,34 +352,35 @@ func TestForSplitData(t *testing.T) {
 	os.RemoveAll("riot.data")
 }
 
+func testNum(t *testing.T, numAdd, numInx, numRm uint64) {
+	tt.Expect(t, "26", numAdd)
+	tt.Expect(t, "6", numInx)
+	tt.Expect(t, "8", numRm)
+}
 func TestDocCounters(t *testing.T) {
 	var engine Engine
 	engine.Init(testOpts(1, "riot.doc"))
 
 	AddDocs(&engine)
-	engine.RemoveDoc(5)
+	engine.RemoveDoc("5")
 	engine.Flush()
 
 	numAdd := engine.NumTokenAdded()
-	tt.Expect(t, "23", numAdd)
 	numInx := engine.NumIndexed()
-	tt.Expect(t, "5", numInx)
 	numRm := engine.NumRemoved()
-	tt.Expect(t, "8", numRm)
+	testNum(t, numAdd, numInx, numRm)
 
 	numAdd = engine.NumTokenIndexAdded()
-	tt.Expect(t, "23", numAdd)
 	numInx = engine.NumDocsIndexed()
-	tt.Expect(t, "5", numInx)
 	numRm = engine.NumDocsRemoved()
-	tt.Expect(t, "8", numRm)
+	testNum(t, numAdd, numInx, numRm)
 
-	docIds := make(map[uint64]bool)
-	docIds[5] = true
-	docIds[1] = true
+	docIds := make(map[string]bool)
+	docIds["5"] = true
+	docIds["1"] = true
 
 	outputs := engine.Search(types.SearchReq{
-		Text:   "World人口",
+		Text:   reqText,
 		DocIds: docIds})
 
 	if outputs.Docs != nil {
